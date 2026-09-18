@@ -1,0 +1,1 @@
+@file:/tmp/app_js_content_only.txt
