@@ -28,3 +28,4 @@ The STL stays in browser memory. It is read with the File API (`File.arrayBuffer
 - **Rotate 90°** buttons (X / Y / Z) turn the loaded mesh 90° around that world axis. Rotations stack until you Clear the model.
 - Wireframe toggles the material. **Reset view** restores the camera/orbit only (mesh orientation is unchanged). **Clear** removes the mesh from the scene and from memory.
 - A colored XYZ axis indicator in the lower-left of the canvas tracks the current view orientation.
+- The viewer is **Z-up** (CAD-style): the grid is the XY plane, and **Z** is vertical off the grid. Rotate Z spins around the vertical axis.
