@@ -23,8 +23,12 @@ const statVerts = document.querySelector("#stat-verts");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x10141c);
 
+// CAD-style Z-up: grid lies in XY, Z comes off the plane.
+THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-camera.position.set(2.4, 1.6, 3.1);
+camera.up.set(0, 0, 1);
+camera.position.set(2.4, -3.1, 1.6);
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -42,10 +46,10 @@ controls.saveState();
 
 scene.add(new THREE.HemisphereLight(0xc9d7e8, 0x2a241c, 0.95));
 const keyLight = new THREE.DirectionalLight(0xfff4e8, 1.7);
-keyLight.position.set(6, 10, 7);
+keyLight.position.set(6, -7, 10);
 scene.add(keyLight);
 const fillLight = new THREE.DirectionalLight(0x8ea4c8, 0.45);
-fillLight.position.set(-7, 3, -5);
+fillLight.position.set(-7, 5, 3);
 scene.add(fillLight);
 
 const AXIS_INSET = 96;
@@ -109,7 +113,7 @@ addAxisLine(worldZ, 0x4a8fe0, "Z", "#4a8fe0");
 let mesh = null;
 let grid = null;
 const worldAxesHelper = new THREE.AxesHelper(1);
-worldAxesHelper.position.set(0, 0.001, 0);
+worldAxesHelper.position.set(0, 0, 0.001);
 scene.add(worldAxesHelper);
 let loadToken = 0;
 let pixelRatioCap = 2;
@@ -434,7 +438,7 @@ function disposeMesh() {
   mesh = null;
 }
 
-function setGrid(span, y) {
+function setGrid(span, z) {
   if (grid) {
     scene.remove(grid);
     grid.geometry.dispose();
@@ -444,10 +448,12 @@ function setGrid(span, y) {
   const size = Math.max(span, 1e-4);
   const divisions = size > 1000 ? 10 : 20;
   grid = new THREE.GridHelper(size, divisions, 0x3d4b60, 0x242c39);
-  grid.position.y = y;
+  // GridHelper is XZ by default; rotate so it lies in XY with Z up.
+  grid.rotation.x = Math.PI / 2;
+  grid.position.z = z;
   scene.add(grid);
   worldAxesHelper.scale.setScalar(Math.max(size * 0.12, 0.5));
-  worldAxesHelper.position.y = y + 0.001;
+  worldAxesHelper.position.set(0, 0, z + 0.001);
 }
 
 function formatBytes(bytes) {
@@ -494,7 +500,8 @@ function frameSize(size) {
   const distance = (span / 2) / Math.tan((camera.fov * Math.PI) / 360) * 1.55;
   camera.near = span / 200;
   camera.far = Math.max(span * 80, distance * 20);
-  camera.position.set(distance * 0.72, distance * 0.5, distance * 0.9);
+  camera.up.set(0, 0, 1);
+  camera.position.set(distance * 0.72, -distance * 0.9, distance * 0.5);
   camera.updateProjectionMatrix();
   controls.target.set(0, 0, 0);
   controls.minDistance = span * 0.02;
@@ -531,8 +538,8 @@ function showMesh(parsed) {
   mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
-  const footprint = Math.max(size.x, size.z, size.y);
-  setGrid(footprint * 1.8, -size.y / 2);
+  const footprint = Math.max(size.x, size.y, size.z);
+  setGrid(footprint * 1.8, -size.z / 2);
   frameSize(size);
   emptyEl.hidden = true;
   emptyEl.setAttribute('hidden', '');
@@ -623,7 +630,8 @@ function clearModel() {
   pixelRatioCap = 2;
   camera.near = 0.1;
   camera.far = 100;
-  camera.position.set(2.4, 1.6, 3.1);
+  camera.up.set(0, 0, 1);
+  camera.position.set(2.4, -3.1, 1.6);
   camera.updateProjectionMatrix();
   controls.target.set(0, 0, 0);
   controls.minDistance = 0;
