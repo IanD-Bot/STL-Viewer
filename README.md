@@ -2,7 +2,11 @@
 
 Static viewer for binary and ASCII STL meshes. There is no backend. The file is parsed and drawn in the browser with Three.js.
 
-## Run
+## Live demo
+
+GitHub Pages serves the app at **https://iand-bot.github.io/STL-Viewer/**. After a push to `main`, the site usually updates within about 10 minutes.
+
+## Run locally
 
 From this directory, start any static file server:
 
@@ -21,5 +25,6 @@ The STL stays in browser memory. It is read with the File API (`File.arrayBuffer
 - Open an `.stl` with the file picker, or drag it onto the page.
 - Orbit with the left mouse button, zoom with the scroll wheel, and pan with the right mouse button (or shift + left drag).
 - The panel shows the filename, file size, triangle count, and vertex count. Vertices are the triangle corners stored in the STL (three per triangle); the loader does not weld them.
-- Wireframe toggles the material, Reset view frames the mesh again, and Clear drops it from the scene and from memory.
- 
+- **Rotate 90°** buttons (X / Y / Z) turn the loaded mesh 90° around that world axis. Rotations stack until you Clear the model.
+- Wireframe toggles the material. **Reset view** restores the camera/orbit only (mesh orientation is unchanged). **Clear** removes the mesh from the scene and from memory.
+- A colored XYZ axis indicator in the lower-left of the canvas tracks the current view orientation.
