@@ -149,6 +149,11 @@ aside {
   text-transform: uppercase;
 }
 
+.dimensions-section {
+  display: grid;
+  gap: 8px;
+}
+
 .rotate-section {
   display: flex;
   flex-direction: column;
