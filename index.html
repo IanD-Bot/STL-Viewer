@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STL Viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 3 L28 9.5 V22.5 L16 29 L4 22.5 V9.5 Z" fill="none" stroke="currentColor" stroke-width="1.6" />
+          <path d="M16 3 V16.2 L28 22.5 M16 16.2 L4 22.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        </svg>
+        <div>
+          <h1>STL Viewer</h1>
+          <p>Binary and ASCII, in the browser</p>
+        </div>
+      </div>
+    </header>
+
+    <aside>
+      <label class="file-btn">
+        Open STL
+        <input id="file-input" type="file" accept=".stl,model/stl,application/sla" />
+      </label>
+
+      <dl class="stats">
+        <div>
+          <dt>File</dt>
+          <dd id="stat-name" title="">—</dd>
+        </div>
+        <div>
+          <dt>Size</dt>
+          <dd id="stat-size">—</dd>
+        </div>
+        <div>
+          <dt>Triangles</dt>
+          <dd id="stat-tris">—</dd>
+        </div>
+        <div>
+          <dt>Vertices</dt>
+          <dd id="stat-verts">—</dd>
+        </div>
+      </dl>
+
+      <label class="toggle">
+        <input id="wireframe" type="checkbox" />
+        <span>Wireframe</span>
+      </label>
+
+      <div class="actions">
+        <button id="reset-view" type="button">Reset view</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+
+      <p id="status" class="status" role="status"></p>
+      <p class="privacy">The mesh stays in this tab. It is never uploaded.</p>
+    </aside>
+
+    <main id="stage">
+      <canvas id="view"></canvas>
+      <div id="empty" class="empty">
+        <p class="empty-title">Drop an STL here</p>
+        <p>or use Open STL. Left drag orbits, scroll zooms, right drag pans.</p>
+      </div>
+      <div id="drop-hint" class="drop-hint" hidden>Drop to view</div>
+    </main>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
