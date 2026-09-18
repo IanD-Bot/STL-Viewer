@@ -90,6 +90,26 @@
         </div>
       </div>
 
+      <div class="pick-section">
+        <div class="section-label">Coordinates</div>
+        <button id="pick-point" type="button" title="Click a visible point on the mesh to read XYZ">Pick point</button>
+        <dl class="stats">
+          <div>
+            <dt>X</dt>
+            <dd id="stat-pick-x">—</dd>
+          </div>
+          <div>
+            <dt>Y</dt>
+            <dd id="stat-pick-y">—</dd>
+          </div>
+          <div>
+            <dt>Z</dt>
+            <dd id="stat-pick-z">—</dd>
+          </div>
+        </dl>
+        <button id="clear-point" type="button" class="secondary" title="Clear the selected point">Clear point</button>
+      </div>
+
       <div class="actions">
         <button id="reset-view" type="button">Reset view</button>
         <button id="clear" type="button">Clear</button>

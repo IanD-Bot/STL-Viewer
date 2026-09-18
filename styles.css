@@ -180,6 +180,21 @@ aside {
   color: #9bc0f0;
 }
 
+.pick-section {
+  display: grid;
+  gap: 8px;
+}
+
+#pick-point.is-active {
+  border-color: #e0b04a;
+  color: #f0d090;
+  background: #2a2418;
+}
+
+#stage.is-picking {
+  cursor: crosshair;
+}
+
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -294,4 +309,10 @@ button:hover {
   .privacy {
     margin-top: 4px;
   }
+}
+
+button.secondary {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.9;
 }

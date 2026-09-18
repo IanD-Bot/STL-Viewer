@@ -10,6 +10,11 @@ const clearButton = document.querySelector("#clear");
 const rotateXButton = document.querySelector("#rotate-x");
 const rotateYButton = document.querySelector("#rotate-y");
 const rotateZButton = document.querySelector("#rotate-z");
+const pickButton = document.querySelector("#pick-point");
+const clearPointButton = document.querySelector("#clear-point");
+const statPickX = document.querySelector("#stat-pick-x");
+const statPickY = document.querySelector("#stat-pick-y");
+const statPickZ = document.querySelector("#stat-pick-z");
 const statusEl = document.querySelector("#status");
 const emptyEl = document.querySelector("#empty");
 const dropHint = document.querySelector("#drop-hint");
@@ -115,6 +120,12 @@ addAxisLine(worldZ, 0x4a8fe0, "Z", "#4a8fe0");
 
 let mesh = null;
 let grid = null;
+let pickMode = false;
+let pickMarker = null;
+const raycaster = new THREE.Raycaster();
+const pointerNdc = new THREE.Vector2();
+let pointerDown = null;
+
 let loadToken = 0;
 let pixelRatioCap = 2;
 let dirty = true;
@@ -549,7 +560,156 @@ function frameSize(size) {
   controls.saveState();
 }
 
+
+function formatPick(value) {
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toFixed(2);
+  if (abs >= 100) return value.toFixed(3);
+  if (abs >= 1) return value.toFixed(4);
+  return value.toFixed(5);
+}
+
+function setPickCoords(point) {
+  if (!point) {
+    statPickX.textContent = "—";
+    statPickY.textContent = "—";
+    statPickZ.textContent = "—";
+    return;
+  }
+  statPickX.textContent = formatPick(point.x);
+  statPickY.textContent = formatPick(point.y);
+  statPickZ.textContent = formatPick(point.z);
+}
+
+function setMeshPickOpacity(selected) {
+  if (!mesh) return;
+  const mat = mesh.material;
+  mat.transparent = Boolean(selected);
+  mat.opacity = selected ? 0.5 : 1;
+  mat.depthWrite = !selected;
+  mat.needsUpdate = true;
+}
+
+function disposePickMarker() {
+  if (!pickMarker) return;
+  scene.remove(pickMarker);
+  pickMarker.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+      else obj.material.dispose();
+    }
+  });
+  pickMarker = null;
+}
+
+function clearPickPoint() {
+  disposePickMarker();
+  setPickCoords(null);
+  setMeshPickOpacity(false);
+  dirty = true;
+}
+
+function makePickMarker(point) {
+  const group = new THREE.Group();
+  group.position.copy(point);
+
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 20, 16),
+    new THREE.MeshBasicMaterial({
+      color: 0xffcc44,
+      depthTest: false,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.95,
+    }),
+  );
+  sphere.renderOrder = 10;
+  group.add(sphere);
+
+  const axisLen = 1.8;
+  const axes = [
+    [new THREE.Vector3(-axisLen, 0, 0), new THREE.Vector3(axisLen, 0, 0), 0xe05050],
+    [new THREE.Vector3(0, -axisLen, 0), new THREE.Vector3(0, axisLen, 0), 0x45b86a],
+    [new THREE.Vector3(0, 0, -axisLen), new THREE.Vector3(0, 0, axisLen), 0x4a8fe0],
+  ];
+  for (const [a, b, color] of axes) {
+    const geom = new THREE.BufferGeometry().setFromPoints([a, b]);
+    const line = new THREE.Line(
+      geom,
+      new THREE.LineBasicMaterial({
+        color,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.95,
+      }),
+    );
+    line.renderOrder = 11;
+    group.add(line);
+  }
+  return group;
+}
+
+function scalePickMarker() {
+  if (!pickMarker || !mesh) return;
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const span = Math.max(size.x, size.y, size.z, 1e-4);
+  pickMarker.scale.setScalar(span * 0.012);
+}
+
+function setPickPoint(point) {
+  disposePickMarker();
+  pickMarker = makePickMarker(point);
+  scene.add(pickMarker);
+  scalePickMarker();
+  setPickCoords(point);
+  setMeshPickOpacity(true);
+  setStatus(`Point ${formatPick(point.x)}, ${formatPick(point.y)}, ${formatPick(point.z)}`);
+  dirty = true;
+}
+
+function setPickMode(on) {
+  pickMode = Boolean(on);
+  pickButton.classList.toggle("is-active", pickMode);
+  stage.classList.toggle("is-picking", pickMode);
+  if (pickMode) {
+    if (!mesh) {
+      setStatus("Load an STL before picking a point.", true);
+      pickMode = false;
+      pickButton.classList.remove("is-active");
+      stage.classList.remove("is-picking");
+      return;
+    }
+    setStatus("Click a visible point on the mesh.");
+  } else if (!pickMarker) {
+    setStatus("");
+  }
+}
+
+function pickFromPointerEvent(event) {
+  if (!mesh || !pickMode) return;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+  pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointerNdc, camera);
+  const hits = raycaster.intersectObject(mesh, false);
+  if (!hits.length) {
+    setStatus("No mesh under the cursor.", true);
+    return;
+  }
+  setPickPoint(hits[0].point.clone());
+  setPickMode(false);
+}
+
 function showMesh(parsed) {
+  clearPickPoint();
+  setPickMode(false);
   disposeMesh();
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(parsed.positions, 3));
@@ -573,6 +733,8 @@ function showMesh(parsed) {
     roughness: 0.46,
     side: THREE.DoubleSide,
     wireframe: wireInput.checked,
+    transparent: false,
+    opacity: 1,
   });
   mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
@@ -592,6 +754,8 @@ function rotateMesh90(axis) {
   mesh.rotateOnWorldAxis(axis, Math.PI / 2);
   mesh.updateMatrixWorld(true);
   seatMeshOnGrid();
+  scalePickMarker();
+  if (pickMarker) setMeshPickOpacity(true);
   dirty = true;
 }
 
@@ -659,6 +823,8 @@ async function loadFile(file) {
 
 function clearModel() {
   loadToken++;
+  clearPickPoint();
+  setPickMode(false);
   disposeMesh();
   wireInput.checked = false;
   setGrid(8);
@@ -701,6 +867,36 @@ resetButton.addEventListener("click", () => {
 });
 
 clearButton.addEventListener("click", clearModel);
+
+pickButton.addEventListener("click", () => {
+  setPickMode(!pickMode);
+});
+
+clearPointButton.addEventListener("click", () => {
+  clearPickPoint();
+  setPickMode(false);
+  setStatus("");
+});
+
+canvas.addEventListener("pointerdown", (event) => {
+  if (!pickMode || event.button !== 0) return;
+  pointerDown = { x: event.clientX, y: event.clientY };
+});
+
+canvas.addEventListener("pointerup", (event) => {
+  if (!pickMode || event.button !== 0 || !pointerDown) return;
+  const dx = event.clientX - pointerDown.x;
+  const dy = event.clientY - pointerDown.y;
+  pointerDown = null;
+  if (dx * dx + dy * dy > 36) return; // ignore orbit drags
+  pickFromPointerEvent(event);
+});
+
+canvas.addEventListener("pointercancel", () => {
+  pointerDown = null;
+});
+
+
 
 let dragDepth = 0;
 window.addEventListener("dragenter", (event) => {
