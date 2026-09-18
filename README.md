@@ -16,9 +16,39 @@ python3 -m http.server
 
 Then open the URL it prints (usually http://localhost:8000). Use a local server rather than opening `index.html` as a `file://` URL, so the browser can load the Three.js module.
 
+
+## Open a file from a workstation path
+
+Browsers cannot silently read arbitrary disk paths. Pass a fetchable URL instead:
+
+```text
+http://localhost:8000/index.html?file=https://example.com/model.stl
+http://localhost:8000/index.html?stl=/models/brain.stl
+```
+
+Supported query keys (first non-empty wins): `file`, `stl`, `path`.
+
+### Helper: open a local `.stl` on Windows / macOS / Linux
+
+From this repo:
+
+```powershell
+# Windows — starts a tiny local server and opens the viewer with the mesh loaded
+.\scripts\open-stl.ps1 -StlPath "D:\exports\brain.stl"
+```
+
+```bash
+# macOS / Linux
+./scripts/open-stl.sh /path/to/brain.stl
+```
+
+The helper serves the viewer and the STL over `http://127.0.0.1`, then opens
+`index.html?file=/model.stl` so loading starts immediately. Drag-and-drop and
+the file picker still work as before.
+
 ## Privacy
 
-The STL stays in browser memory. It is read with the File API (`File.arrayBuffer()`, then text when the file is ASCII), parsed on the page, and never uploaded or fetched. Closing or reloading the tab drops the mesh. The only network request is the Three.js library itself from the CDN, not your model.
+The STL stays in browser memory and is parsed on the page. Drag-and-drop / file-picker loads use the File API only (never uploaded). A `?file=` / `?stl=` / `?path=` launch fetches that URL into memory (still no upload to a backend of ours). Closing or reloading the tab drops the mesh. Three.js still loads from the CDN.
 
 ## Using it
 

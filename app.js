@@ -794,6 +794,20 @@ function resize() {
   dirty = true;
 }
 
+async function applyParsedBuffer(buffer, fileLike, token) {
+  setStatus("Parsing mesh…");
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  if (token !== loadToken) return;
+  const parsed = parseSTL(buffer);
+  if (token !== loadToken) return;
+  pixelRatioCap = parsed.triangles > 1_000_000 ? 1 : 2;
+  resize();
+  showMesh(parsed);
+  setStats(fileLike, parsed);
+  const kind = parsed.format === "binary" ? "Binary" : "ASCII";
+  setStatus(`${kind} STL · ${formatCount(parsed.triangles)} triangles`);
+}
+
 async function loadFile(file) {
   if (!file) return;
   const token = ++loadToken;
@@ -802,23 +816,115 @@ async function loadFile(file) {
   try {
     const buffer = await file.arrayBuffer();
     if (token !== loadToken) return;
-    setStatus("Parsing mesh…");
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    if (token !== loadToken) return;
-    const parsed = parseSTL(buffer);
-    if (token !== loadToken) return;
-    pixelRatioCap = parsed.triangles > 1_000_000 ? 1 : 2;
-    resize();
-    showMesh(parsed);
-    setStats(file, parsed);
-    const kind = parsed.format === "binary" ? "Binary" : "ASCII";
-    setStatus(`${kind} STL · ${formatCount(parsed.triangles)} triangles`);
+    await applyParsedBuffer(buffer, file, token);
   } catch (error) {
     if (token !== loadToken) return;
     setStatus(error instanceof Error ? error.message : "Could not read that STL.", true);
   } finally {
     fileInput.value = "";
   }
+}
+
+function launchParamValue() {
+  const params = new URLSearchParams(window.location.search);
+  for (const key of ["file", "stl", "path"]) {
+    const raw = params.get(key);
+    if (raw && raw.trim()) return raw.trim();
+  }
+  return null;
+}
+
+function looksLikeFilesystemPath(spec) {
+  return (
+    /^[a-zA-Z]:[\\/]/.test(spec) ||
+    spec.startsWith("\\\\") ||
+    (spec.startsWith("/") && !spec.includes("://") && !/\.(stl)([?#]|$)/i.test(spec.split("/").pop() || "") && spec.split("/").length > 2 && !spec.startsWith("/model"))
+  );
+}
+
+function isAbsoluteDiskPath(spec) {
+  return /^[a-zA-Z]:[\\/]/.test(spec) || spec.startsWith("\\\\") ||
+    (/^\/(?!\/)/.test(spec) && !spec.startsWith("/model") && !/\.stl$/i.test(spec) && spec.includes("/", 1) && !spec.startsWith("/http"));
+}
+
+// Treat Windows paths and POSIX home/abs paths without a URL scheme as disk paths.
+function isDiskPath(spec) {
+  if (/^(https?:|blob:|file:)/i.test(spec)) return false;
+  if (/^[a-zA-Z]:[\\/]/.test(spec) || spec.startsWith("\\\\")) return true;
+  // POSIX abs path that isn't a same-origin root-relative STL URL like /foo.stl
+  if (spec.startsWith("/") && (spec.match(/\//g) || []).length >= 2 && !spec.startsWith("//")) {
+    // Allow simple same-origin paths: /model.stl or /meshes/a.stl
+    // Disk paths on Unix often look the same — prefer URL resolution for leading /
+    // unless it looks like /Users, /home, /tmp, /var, /mnt, /Volumes
+    return /^\/(Users|home|tmp|var|mnt|Volumes|private)\b/.test(spec);
+  }
+  return false;
+}
+
+function displayNameFromSpec(spec) {
+  try {
+    const cleaned = spec.split("?")[0].split("#")[0];
+    const parts = cleaned.replace(/\\/g, "/").split("/");
+    return parts[parts.length - 1] || "model.stl";
+  } catch {
+    return "model.stl";
+  }
+}
+
+function resolveLaunchUrl(spec) {
+  const trimmed = spec.trim();
+  if (/^(https?:|blob:|file:)/i.test(trimmed)) return trimmed;
+  if (isDiskPath(trimmed)) return null;
+  try {
+    return new URL(trimmed, window.location.href).href;
+  } catch {
+    return trimmed;
+  }
+}
+
+async function loadFromLaunchSpec(spec) {
+  const name = displayNameFromSpec(spec);
+  if (isDiskPath(spec)) {
+    setStatus(
+      "Browsers cannot open raw disk paths. Run scripts/open-stl.ps1 (or open-stl.sh) " +
+        "with the STL path, or pass an http(s) URL via ?file=",
+      true,
+    );
+    return;
+  }
+  const url = resolveLaunchUrl(spec);
+  if (!url) {
+    setStatus("Could not resolve launch file parameter.", true);
+    return;
+  }
+  const token = ++loadToken;
+  setStatus(`Fetching ${name}…`);
+  try {
+    const response = await fetch(url);
+    if (token !== loadToken) return;
+    if (!response.ok) {
+      throw new Error(`Could not fetch STL (${response.status} ${response.statusText})`);
+    }
+    const buffer = await response.arrayBuffer();
+    if (token !== loadToken) return;
+    const fileLike = new File([buffer], name, { type: "model/stl" });
+    await applyParsedBuffer(buffer, fileLike, token);
+  } catch (error) {
+    if (token !== loadToken) return;
+    let message = error instanceof Error ? error.message : "Could not load that STL.";
+    if (/^file:/i.test(url)) {
+      message =
+        "file:// fetch was blocked by the browser. Use scripts/open-stl.ps1 / open-stl.sh, " +
+        "or serve over http and pass ?file=…";
+    }
+    setStatus(message, true);
+  }
+}
+
+async function loadFromLaunchParams() {
+  const spec = launchParamValue();
+  if (!spec) return;
+  await loadFromLaunchSpec(spec);
 }
 
 function clearModel() {
@@ -938,3 +1044,5 @@ function frame() {
   dirty = false;
 }
 frame();
+
+loadFromLaunchParams();
