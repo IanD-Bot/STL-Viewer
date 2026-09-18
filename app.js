@@ -1,1 +1,1 @@
-@file:/tmp/app_js_content_only.txt
+PLACEHOLDER_REPLACE_WITH_FILE
