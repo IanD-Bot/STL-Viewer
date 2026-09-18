@@ -52,10 +52,12 @@ const AXIS_INSET = 96;
 const AXIS_MARGIN = 10;
 const axesScene = new THREE.Scene();
 const axesCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
+axesCamera.position.set(0, 0, 2.4);
+const axesRoot = new THREE.Group();
+axesScene.add(axesRoot);
 const worldX = new THREE.Vector3(1, 0, 0);
 const worldY = new THREE.Vector3(0, 1, 0);
 const worldZ = new THREE.Vector3(0, 0, 1);
-const axesCamOffset = new THREE.Vector3();
 
 function makeAxisLabel(text, colorCss) {
   const labelCanvas = document.createElement("canvas");
@@ -93,18 +95,22 @@ function addAxisLine(dir, color, label, labelCss) {
     depthWrite: false,
     toneMapped: false,
   });
-  axesScene.add(new THREE.Line(geometry, material));
+  axesRoot.add(new THREE.Line(geometry, material));
   const sprite = makeAxisLabel(label, labelCss);
   sprite.position.copy(dir).multiplyScalar(1.05);
-  axesScene.add(sprite);
+  axesRoot.add(sprite);
 }
 
+// World-space axes: same vectors as Rotate X/Y/Z (rotateOnWorldAxis).
 addAxisLine(worldX, 0xe05050, "X", "#e86060");
 addAxisLine(worldY, 0x45b86a, "Y", "#4cbc6a");
 addAxisLine(worldZ, 0x4a8fe0, "Z", "#4a8fe0");
 
 let mesh = null;
 let grid = null;
+const worldAxesHelper = new THREE.AxesHelper(1);
+worldAxesHelper.position.set(0, 0.001, 0);
+scene.add(worldAxesHelper);
 let loadToken = 0;
 let pixelRatioCap = 2;
 let dirty = true;
@@ -440,6 +446,8 @@ function setGrid(span, y) {
   grid = new THREE.GridHelper(size, divisions, 0x3d4b60, 0x242c39);
   grid.position.y = y;
   scene.add(grid);
+  worldAxesHelper.scale.setScalar(Math.max(size * 0.12, 0.5));
+  worldAxesHelper.position.y = y + 0.001;
 }
 
 function formatBytes(bytes) {
@@ -548,14 +556,11 @@ function axesInsetSize(width, height) {
 function renderAxesGizmo(width, height) {
   const inset = axesInsetSize(width, height);
   const margin = Math.min(AXIS_MARGIN, Math.max(4, Math.floor(inset * 0.1)));
-  axesCamOffset.copy(camera.position).sub(controls.target);
-  if (axesCamOffset.lengthSq() < 1e-10) {
-    axesCamOffset.set(0, 0, 1);
-  } else {
-    axesCamOffset.normalize();
-  }
-  axesCamera.position.copy(axesCamOffset).multiplyScalar(2.4);
-  axesCamera.up.copy(camera.up);
+  // Lock gizmo orientation to the main camera quaternion so world X/Y/Z in
+  // the corner match rotateOnWorldAxis(worldX/Y/Z) in the main view.
+  axesRoot.quaternion.copy(camera.quaternion).invert();
+  axesCamera.position.set(0, 0, 2.4);
+  axesCamera.up.set(0, 1, 0);
   axesCamera.lookAt(0, 0, 0);
   axesCamera.updateProjectionMatrix();
 
