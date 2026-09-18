@@ -17,6 +17,9 @@ const stage = document.querySelector("#stage");
 const canvas = document.querySelector("#view");
 const statName = document.querySelector("#stat-name");
 const statSize = document.querySelector("#stat-size");
+const statDimX = document.querySelector("#stat-dim-x");
+const statDimY = document.querySelector("#stat-dim-y");
+const statDimZ = document.querySelector("#stat-dim-z");
 const statTris = document.querySelector("#stat-tris");
 const statVerts = document.querySelector("#stat-verts");
 
@@ -466,6 +469,7 @@ function seatMeshOnGrid() {
   mesh.updateMatrixWorld(true);
   const footprint = Math.max(size.x, size.y, size.z);
   setGrid(footprint * 1.8);
+  setDimensions(size);
   return size;
 }
 
@@ -485,6 +489,27 @@ function formatCount(value) {
   return value.toLocaleString("en-US");
 }
 
+function formatDim(value) {
+  if (!Number.isFinite(value)) return "—";
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toFixed(1);
+  if (abs >= 100) return value.toFixed(2);
+  if (abs >= 1) return value.toFixed(3);
+  return value.toFixed(4);
+}
+
+function setDimensions(size) {
+  if (!size) {
+    statDimX.textContent = "—";
+    statDimY.textContent = "—";
+    statDimZ.textContent = "—";
+    return;
+  }
+  statDimX.textContent = formatDim(size.x);
+  statDimY.textContent = formatDim(size.y);
+  statDimZ.textContent = formatDim(size.z);
+}
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle("is-error", Boolean(isError && message));
@@ -495,6 +520,7 @@ function setStats(file, parsed) {
     statName.textContent = "—";
     statName.title = "";
     statSize.textContent = "—";
+    setDimensions(null);
     statTris.textContent = "—";
     statVerts.textContent = "—";
     document.title = "STL Viewer";
