@@ -112,14 +112,11 @@ addAxisLine(worldZ, 0x4a8fe0, "Z", "#4a8fe0");
 
 let mesh = null;
 let grid = null;
-const worldAxesHelper = new THREE.AxesHelper(1);
-worldAxesHelper.position.set(0, 0, 0.001);
-scene.add(worldAxesHelper);
 let loadToken = 0;
 let pixelRatioCap = 2;
 let dirty = true;
 
-setGrid(8, 0);
+setGrid(8);
 
 function isWs(code) {
   return code === 9 || code === 10 || code === 11 || code === 12 || code === 13 || code === 32;
@@ -438,7 +435,7 @@ function disposeMesh() {
   mesh = null;
 }
 
-function setGrid(span, z) {
+function setGrid(span) {
   if (grid) {
     scene.remove(grid);
     grid.geometry.dispose();
@@ -448,12 +445,28 @@ function setGrid(span, z) {
   const size = Math.max(span, 1e-4);
   const divisions = size > 1000 ? 10 : 20;
   grid = new THREE.GridHelper(size, divisions, 0x3d4b60, 0x242c39);
-  // GridHelper is XZ by default; rotate so it lies in XY with Z up.
+  // GridHelper is XZ by default; rotate so it lies in XY with Z up at z = 0.
   grid.rotation.x = Math.PI / 2;
-  grid.position.z = z;
+  grid.position.z = 0;
   scene.add(grid);
-  worldAxesHelper.scale.setScalar(Math.max(size * 0.12, 0.5));
-  worldAxesHelper.position.set(0, 0, z + 0.001);
+}
+
+/** Keep mesh XY-centered and resting on the z = 0 grid (no hover after rotate). */
+function seatMeshOnGrid() {
+  if (!mesh) return null;
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+  mesh.position.x += -center.x;
+  mesh.position.y += -center.y;
+  mesh.position.z += -box.min.z;
+  mesh.updateMatrixWorld(true);
+  const footprint = Math.max(size.x, size.y, size.z);
+  setGrid(footprint * 1.8);
+  return size;
 }
 
 function formatBytes(bytes) {
@@ -538,9 +551,8 @@ function showMesh(parsed) {
   mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
-  const footprint = Math.max(size.x, size.y, size.z);
-  setGrid(footprint * 1.8, -size.z / 2);
-  frameSize(size);
+  const seated = seatMeshOnGrid() || size;
+  frameSize(seated);
   emptyEl.hidden = true;
   emptyEl.setAttribute('hidden', '');
   dirty = true;
@@ -553,6 +565,7 @@ function rotateMesh90(axis) {
   }
   mesh.rotateOnWorldAxis(axis, Math.PI / 2);
   mesh.updateMatrixWorld(true);
+  seatMeshOnGrid();
   dirty = true;
 }
 
@@ -622,7 +635,7 @@ function clearModel() {
   loadToken++;
   disposeMesh();
   wireInput.checked = false;
-  setGrid(8, 0);
+  setGrid(8);
   setStats(null, null);
   setStatus("");
   emptyEl.hidden = false;
