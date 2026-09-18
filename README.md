@@ -22,3 +22,4 @@ The STL stays in browser memory. It is read with the File API (`File.arrayBuffer
 - Orbit with the left mouse button, zoom with the scroll wheel, and pan with the right mouse button (or shift + left drag).
 - The panel shows the filename, file size, triangle count, and vertex count. Vertices are the triangle corners stored in the STL (three per triangle); the loader does not weld them.
 - Wireframe toggles the material, Reset view frames the mesh again, and Clear drops it from the scene and from memory.
+ 
