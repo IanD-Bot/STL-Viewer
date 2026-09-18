@@ -139,6 +139,42 @@ aside {
   accent-color: #e0a36a;
 }
 
+
+.section-label {
+  margin: 0 0 8px;
+  color: #8e9aab;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rotate-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.rotate-axes {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+#rotate-x:hover {
+  border-color: #e06060;
+  color: #f0a8a8;
+}
+
+#rotate-y:hover {
+  border-color: #4cbc6a;
+  color: #9be0ae;
+}
+
+#rotate-z:hover {
+  border-color: #4a8fe0;
+  color: #9bc0f0;
+}
+
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
